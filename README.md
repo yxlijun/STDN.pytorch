@@ -33,7 +33,7 @@ git clone https://github.com/qijiezhao/M2Det.git
 sh make.sh
 ```
 
-- Prepare dataset (e.g., VOC, COCO), refer to [sss.pytorch](https://github.com/amdegroot/ssd.pytorch) for detailed instructions.
+- Prepare dataset (e.g., VOC, COCO), refer to [ssd.pytorch](https://github.com/amdegroot/ssd.pytorch) for detailed instructions.
 ### train
 you can train different set according to configs/*  
 ```
@@ -54,7 +54,7 @@ you can test your image, First, download the pretrained stdn300_densenet169.pth.
 python demo.py --dataset VOC\COCO --trained_model ./weights/STDN_VOC_size300_netdensenet_epoch650.pth --show  
 ```
 You can see the image with drawed boxes as:
-<div align=center><img src="VOC/im_res/street_stdn.jpg" width="450" hegiht="163" align=center />
+<div align=center><img src="imgs/VOC/im_res/street_stdn.jpg" width="450" hegiht="163" align=center />
 
 <div align=left>
 
