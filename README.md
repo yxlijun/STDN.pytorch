@@ -37,18 +37,22 @@ sh make.sh
 - 
 ### train
 you can train different set according to configs/*  
-```python train.py --dataset VOC\COCO --config ./configs/stdn300_densenet169.py  
+```
+python train.py --dataset VOC\COCO --config ./configs/stdn300_densenet169.py  
 ```  
 if you train with multi gpu    
-```  CUDA_VISIBLE_DEVICES=0,1 python train.py --dataset VOC\COCO --config ./configs/stdn300_densenet169.py --ngpu 2
+```  
+CUDA_VISIBLE_DEVICES=0,1 python train.py --dataset VOC\COCO --config ./configs/stdn300_densenet169.py --ngpu 2
 ```
 ### eval
 you can evaluate your model in  voc and coco  
-```python test.py --dataset VOC\COCO --trained_model ./weights/STDN_VOC_size300_netdensenet_epoch650.pth 
+```
+python test.py --dataset VOC\COCO --trained_model ./weights/STDN_VOC_size300_netdensenet_epoch650.pth 
 ```
 ### demo 
 you can test your image  
-```python demo.py --dataset VOC\COCO --trained_model ./weights/STDN_VOC_size300_netdensenet_epoch650.pth --show  
+```
+python demo.py --dataset VOC\COCO --trained_model ./weights/STDN_VOC_size300_netdensenet_epoch650.pth --show  
 ```
 
 
