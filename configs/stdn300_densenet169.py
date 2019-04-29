@@ -20,23 +20,32 @@ model = dict(
     p=0.6,
     anchor_config=dict(
         feature_maps=[36, 18, 9, 5, 3, 1],
-        step_pattern=[8, 16, 33, 75, 100, 300],
-        size_pattern=[0.08, 0.15, 0.33, 0.51, 0.69, 0.87, 1.05],
+        steps=[8, 16, 33, 75, 100, 300],
+        aspect_ratios=[[1.6, 2, 3], [1.6, 2, 3], [1.6, 2, 3],
+                       [1.6, 2, 3], [1.6, 2, 3], [1.6, 2, 3]],
+        VOC=dict(
+            min_ratio=20,
+            max_ratio=90
+        ),
+        COCO=dict(
+            min_ratio=15,
+            max_ratio=90
+        )
     ),
     save_epochs=10,
+    pretained_model='weights/densenet169.pth',
     weights_save='weights/'
 )
 
 train_cfg = dict(
     cuda=True,
-    warmup=5,
     per_batch_size=16,
-    lr=[1e-3, 1e-4, 1e-5],
-    gamma=0.1,
+    lr=1e-3,
+    gamma=-0.9,
     end_lr=1e-6,
     step_lr=dict(
-        COCO=[90, 110, 130, 150],
-        VOC=[500, 600, 700, 750],
+        COCO=[90, 200, 300, 350],
+        VOC=[600, 750, 800],
     ),
     print_epochs=10,
     num_workers=8,
@@ -47,8 +56,8 @@ test_cfg = dict(
     topk=0,
     iou=0.45,
     soft_nms=True,
-    score_threshold=0.1,
-    keep_per_class=50,
+    score_threshold=0.01,
+    keep_per_class=200,
     save_folder='eval',
 )
 

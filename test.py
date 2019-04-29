@@ -39,7 +39,7 @@ global cfg
 cfg = Config.fromfile(args.config)
 if not os.path.exists(cfg.test_cfg.save_folder):
     os.mkdir(cfg.test_cfg.save_folder)
-anchor_config = anchors(cfg)
+anchor_config = anchors(cfg.model,args.dataset)
 print_info('The Anchor info: \n{}'.format(anchor_config))
 priorbox = PriorBox(anchor_config)
 with torch.no_grad():

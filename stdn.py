@@ -75,6 +75,51 @@ class _Transition(nn.Sequential):
         self.add_module('pool', nn.AvgPool2d(kernel_size=2, stride=2))
 
 
+class conv_bn_relu(nn.Module):
+    """docstring for conv_bn_relu"""
+
+    def __init__(self, in_planes, out_planes, kernel_size=3, stride=1, padding=1):
+        super(conv_bn_relu, self).__init__()
+        self.conv = nn.Conv2d(
+            in_planes, out_planes, kernel_size=kernel_size, stride=stride, padding=padding)
+        self.bn = nn.BatchNorm2d(out_planes)
+
+    def forward(self, x):
+        return F.relu(self.bn(self.conv(x)), inplace=True)
+
+
+class bn_relu_conv(nn.Module):
+    """docstring for bn_relu_conv"""
+
+    def __init__(self, in_planes, out_planes, kernel_size=3, stride=1, padding=1):
+        super(bn_relu_conv, self).__init__()
+        self.bn = nn.BatchNorm2d(in_planes)
+        self.conv = nn.Conv2d(
+            in_planes, out_planes, kernel_size=kernel_size, stride=stride, padding=padding)
+
+    def forward(self, x):
+        out = F.relu(self.bn(x), inplace=True)
+        out = self.conv(out)
+        return out
+
+
+class _ItemBlock(nn.Module):
+    """docstring for _ItemBlock"""
+
+    def __init__(self, in_planes, out_planes):
+        super(_ItemBlock, self).__init__()
+        self.conv1 = conv_bn_relu(in_planes, out_planes, 3, 2, 1)
+        self.conv2 = conv_bn_relu(out_planes, out_planes, 3, 1, 1)
+        self.conv3 = conv_bn_relu(out_planes, out_planes, 3, 1, 1)
+        self.pool = nn.AvgPool2d(kernel_size=2, stride=2)
+
+    def forward(self, x):
+        out = self.conv1(x)
+        out = self.conv2(out)
+        out = self.conv3(out)
+        return self.pool(out)
+
+
 class DenseNet(nn.Module):
     r"""Densenet-BC model class, based on
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_
@@ -89,29 +134,15 @@ class DenseNet(nn.Module):
         num_classes (int) - number of classification classes
     """
 
-    def __init__(self, growth_rate=32, block_config=(6, 12, 24, 16),
+    def __init__(self, growth_rate=32, block_config=(6, 12, 32, 32),
                  num_init_features=64, predict_layer=(5, 10, 15, 20, 25, 32), bn_size=4, drop_rate=0):
 
         super(DenseNet, self).__init__()
 
-        # First convolution
-        self.features = nn.Sequential(OrderedDict([
-            ('conv0', nn.Conv2d(3, num_init_features,
-                                kernel_size=3, stride=2, padding=1, bias=False)),
-            ('norm0', nn.BatchNorm2d(num_init_features)),
-            ('relu0', nn.ReLU(inplace=True)),
-            ('conv1', nn.Conv2d(num_init_features, num_init_features,
-                                kernel_size=3, stride=1, padding=1, bias=False)),
-            ('norm1', nn.BatchNorm2d(num_init_features)),
-            ('relu1', nn.ReLU(inplace=True)),
+        # item block
+        self.item_block = _ItemBlock(3, num_init_features)
 
-            ('conv2', nn.Conv2d(num_init_features, num_init_features,
-                                kernel_size=3, stride=1, padding=1, bias=False)),
-            ('norm2', nn.BatchNorm2d(num_init_features)),
-            ('relu2', nn.ReLU(inplace=True)),
-
-            ('pool2', nn.AvgPool2d(kernel_size=2, stride=2)),
-        ]))
+        self.features = nn.Sequential()
 
         # Each denseblock
         num_features = num_init_features
@@ -129,10 +160,10 @@ class DenseNet(nn.Module):
         self.predict_layer = predict_layer
 
     def forward(self, x):
+        x = self.item_block(x)
         x = self.features[0:-1](x)
         soureces = []
-        denseblock4_len = len(self.features[-1])
-        for i in xrange(denseblock4_len):
+        for i in xrange(len(self.features[-1])):
             x = self.features[-1][i](x)
             if (i + 1) in self.predict_layer:
                 soureces += [x]
@@ -158,21 +189,15 @@ class DetectionLayer(nn.Module):
     def __init__(self, num_input_features, out_channel):
         super(DetectionLayer, self).__init__()
         self.mid_channel = 256
-        self.features = nn.Sequential(
-            nn.Conv2d(num_input_features,  self.mid_channel,
-                      kernel_size=1, stride=1),
-            nn.BatchNorm2d(self.mid_channel),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(self.mid_channel, self.mid_channel,
-                      kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(self.mid_channel),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(self.mid_channel, out_channel,
-                      kernel_size=3, stride=1, padding=1)
-        )
+        self.conv1 = bn_relu_conv(
+            num_input_features, self.mid_channel, 1, 1, 0)
+        self.conv2 = bn_relu_conv(self.mid_channel, self.mid_channel, 3, 1, 1)
+        self.conv3 = bn_relu_conv(self.mid_channel, out_channel, 3, 1, 1)
 
     def forward(self, x):
-        out = self.features(x)
+        out = self.conv1(x)
+        out = self.conv2(out)
+        out = self.conv3(out)
         return out
 
 
@@ -251,7 +276,8 @@ class STDN(nn.Module):
             )
         return output
 
-    def init_model(self):
+    def init_model(self, pretrained_model):
+
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 # nn.init.kaiming_normal_(m.weight)

@@ -21,6 +21,7 @@ from configs.CC import Config
 from termcolor import cprint
 from utils.nms_wrapper import nms
 import numpy as np
+import math
 
 
 def set_logger(status):
@@ -37,17 +38,40 @@ def set_logger(status):
         pass
 
 
-def anchors(cfg):
-    return mk_anchors(cfg.model.input_size,
-                      cfg.model.input_size,
-                      cfg.model.anchor_config.feature_maps,
-                      cfg.model.anchor_config.size_pattern,
-                      cfg.model.anchor_config.step_pattern)
+def get_min_max_sizes(min_ratio, max_ratio, input_size, mbox_source_num):
+    step = int(math.floor(max_ratio - min_ratio) / (mbox_source_num - 2))
+    min_sizes = list()
+    max_sizes = list()
+    for ratio in xrange(min_ratio, max_ratio + 1, step):
+        min_sizes.append(input_size * ratio / 100)
+        max_sizes.append(input_size * (ratio + step) / 100)
+
+    if min_ratio == 20:
+        min_sizes = [input_size * 10 / 100.] + min_sizes
+        max_sizes = [input_size * 20 / 100.] + max_sizes
+    else:
+        min_sizes = [input_size * 7 / 100.] + min_sizes
+        max_sizes = [input_size * 15 / 100.] + max_sizes
+    return min_sizes, max_sizes
+
+
+def anchors(config, datasetname):
+    config_size = getattr(config.anchor_config, datasetname)
+    cfg = dict()
+    cfg['feature_maps'] = config.anchor_config.feature_maps
+    cfg['min_dim'] = config.input_size
+    cfg['steps'] = config.anchor_config.steps
+    cfg['min_sizes'], cfg['max_sizes'] = get_min_max_sizes(
+        config_size.min_ratio, config_size.max_ratio, config.input_size, len(cfg['feature_maps']))
+    cfg['aspect_ratios'] = config.anchor_config.aspect_ratios
+    cfg['variance'] = [0.1, 0.2]
+    cfg['clip'] = True
+    return cfg
 
 
 def init_net(net, cfg, resume_net):
     if cfg.model.init_net and not resume_net:
-        net.init_model()
+        net.init_model(cfg.model.pretained_model)
     else:
         print('Loading resume network...')
         state_dict = torch.load(resume_net)
@@ -66,7 +90,7 @@ def init_net(net, cfg, resume_net):
 
 def set_optimizer(net, cfg):
     return optim.SGD(net.parameters(),
-                     lr=cfg.train_cfg.lr[0],
+                     lr=cfg.train_cfg.lr,
                      momentum=cfg.optimizer.momentum,
                      weight_decay=cfg.optimizer.weight_decay)
 
@@ -91,8 +115,7 @@ def adjust_learning_rate(optimizer, epoch, cfg, dataset):
     global lr
     if epoch in _lr_config:
         i = _lr_config.index(epoch) + 1
-        lr = cfg.train_cfg.lr[i] if i < len(
-            cfg.train_cfg.lr) else cfg.train_cfg.end_lr
+        lr = cfg.train_cfg.lr*pow(0.1,i) if cfg.train_cfg.lr*pow(0.1,i) > cfg.train_cfg.end_lr else cfg.train_cfg.end_lr
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
     else:
@@ -137,13 +160,14 @@ def print_info(info, _type=None):
 
 
 def save_checkpoint(net, cfg, final=True, datasetname='COCO', epoch=10):
-    if not os.path.exists(cfg.model.weights_save):
-        os.makedirs(cfg.model.weights_save)
+    weights_save_path = os.path.join(cfg.model.weights_save, datasetname) + '/'
+    if not os.path.exists(weights_save_path):
+        os.makedirs(weights_save_path)
     if final:
-        torch.save(net.state_dict(), cfg.model.weights_save +
+        torch.save(net.state_dict(), weights_save_path +
                    'Final_STDN_{}_size{}_net{}.pth'.format(datasetname, cfg.model.input_size, cfg.model.coco_config.backbone))
     else:
-        torch.save(net.state_dict(), cfg.model.weights_save +
+        torch.save(net.state_dict(), weights_save_path +
                    'STDN_{}_size{}_net{}_epoch{}.pth'.format(datasetname, cfg.model.input_size, cfg.model.coco_config.backbone, epoch))
 
 

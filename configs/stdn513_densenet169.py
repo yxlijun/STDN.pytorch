@@ -8,35 +8,44 @@ model = dict(
         backbone='densenet',
         predict_channel=[104, 360, 1280, 1120, 960, 800],
         anchor_number=[8, 8, 8, 8, 8, 8],
-        scale_param=[16, 3, 2, 2, 4],
+        scale_param=[16, 3, 2, 2, 4]
     ),
     coco_config=dict(
         num_classes=81,
         backbone='densenet',
         predict_channel=[104, 360, 1280, 1120, 960, 800],
         anchor_number=[8, 8, 8, 8, 8, 8],
-        scale_param=[16, 3, 2, 2, 4],
+        scale_param=[16, 3, 2, 2, 4]
     ),
     p=0.6,
     anchor_config=dict(
         feature_maps=[64, 32, 16, 8, 5, 1],
-        step_pattern=[8, 16, 32, 64, 102, 513],
-        size_pattern=[0.06, 0.15, 0.33, 0.51, 0.69, 0.87, 1.05],
+        steps=[8, 16, 32, 64, 102, 513],
+        aspect_ratios=[[1.6, 2, 3], [1.6, 2, 3], [1.6, 2, 3],
+                       [1.6, 2, 3], [1.6, 2, 3], [1.6, 2, 3]],
+        VOC=dict(
+            min_ratio=20,
+            max_ratio=90
+        ),
+        COCO=dict(
+            min_ratio=15,
+            max_ratio=90
+        )
     ),
     save_epochs=10,
+    pretained_model='weights/densenet169.pth',
     weights_save='weights/'
 )
 
 train_cfg = dict(
     cuda=True,
-    warmup=5,
-    per_batch_size=8,
-    lr=[1e-3, 1e-4, 1e-5],
-    gamma=0.1,
+    per_batch_size=16,
+    lr=1e-2,
+    gamma=-0.9,
     end_lr=1e-6,
     step_lr=dict(
-        COCO=[90, 110, 130, 150],
-        VOC=[500, 600, 700, 750],
+       COCO=[90, 200, 300, 350],
+        VOC=[500, 650, 750, 800],
     ),
     print_epochs=10,
     num_workers=8,
@@ -47,9 +56,9 @@ test_cfg = dict(
     topk=0,
     iou=0.45,
     soft_nms=True,
-    score_threshold=0.1,
-    keep_per_class=50,
-    save_folder='eval'
+    score_threshold=0.01,
+    keep_per_class=200,
+    save_folder='eval',
 )
 
 loss = dict(overlap_thresh=0.5,

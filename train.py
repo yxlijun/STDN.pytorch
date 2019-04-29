@@ -43,6 +43,7 @@ cfg = Config.fromfile(args.config)
 net = get_network(build_net, cfg, args.dataset)
 init_net(net, cfg, args.resume_net)  # init the network with pretrained
 # weights or resumed weights
+
 if args.ngpu > 1:
     net = torch.nn.DataParallel(net)
 if cfg.train_cfg.cuda:
@@ -51,7 +52,7 @@ if cfg.train_cfg.cuda:
 
 optimizer = set_optimizer(net, cfg)
 criterion = set_criterion(cfg, args.dataset)
-priorbox = PriorBox(anchors(cfg))
+priorbox = PriorBox(anchors(cfg.model, args.dataset))
 
 with torch.no_grad():
     priors = priorbox.forward()
@@ -73,36 +74,36 @@ if __name__ == '__main__':
         start_iter = args.resume_epoch * epoch_size
     else:
         start_iter = 0
-        for iteration in xrange(start_iter, max_iter):
-            if iteration % epoch_size == 0:
-                batch_iterator = iter(data.DataLoader(dataset,
+    for iteration in xrange(start_iter, max_iter):
+        if iteration % epoch_size == 0:
+            batch_iterator = iter(data.DataLoader(dataset,
                                                       cfg.train_cfg.per_batch_size * args.ngpu,
                                                       shuffle=True,
                                                       num_workers=cfg.train_cfg.num_workers,
                                                       collate_fn=detection_collate))
-                if epoch % cfg.model.save_epochs == 0:
-                    save_checkpoint(net, cfg, final=False,
+            if epoch % cfg.model.save_epochs == 0:
+                save_checkpoint(net, cfg, final=False,
                                     datasetname=args.dataset, epoch=epoch)
-                epoch += 1
-            load_t0 = time.time()
-            if iteration in stepvalues:
-                step_index += 1
-            lr = adjust_learning_rate(optimizer, epoch, cfg, args.dataset)
-            images, targets = next(batch_iterator)
-            if cfg.train_cfg.cuda:
-                images = images.cuda()
-                targets = [anno.cuda() for anno in targets]
-            out = net(images)
-            optimizer.zero_grad()
-            loss_l, loss_c = criterion(out, priors, targets)
-            loss = loss_l + loss_c
-            write_logger({'loc_loss': loss_l.item(),
+            epoch += 1
+        load_t0 = time.time()
+        if iteration in stepvalues:
+            step_index += 1
+        lr = adjust_learning_rate(optimizer, epoch, cfg, args.dataset)
+        images, targets = next(batch_iterator)
+        if cfg.train_cfg.cuda:
+            images = images.cuda()
+            targets = [anno.cuda() for anno in targets]
+        out = net(images)
+        optimizer.zero_grad()
+        loss_l, loss_c = criterion(out, priors, targets)
+        loss = loss_l + loss_c
+        write_logger({'loc_loss': loss_l.item(),
                           'conf_loss': loss_c.item(),
                           'loss': loss.item()}, logger, iteration, status=args.tensorboard)
-            loss.backward()
-            optimizer.step()
-            load_t1 = time.time()
-            print_train_log(iteration, cfg.train_cfg.print_epochs,
+        loss.backward()
+        optimizer.step()
+        load_t1 = time.time()
+        print_train_log(iteration, cfg.train_cfg.print_epochs,
                             [time.ctime(), epoch, iteration % epoch_size, epoch_size, iteration, loss_l.item(), loss_c.item(), load_t1 - load_t0, lr])
     save_checkpoint(net, cfg, final=True,
                     datasetname=args.dataset, epoch=-1)

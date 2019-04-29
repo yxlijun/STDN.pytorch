@@ -38,7 +38,7 @@ print_info(' -------------------------------------------------------------------
 
 global cfg
 cfg = Config.fromfile(args.config)
-anchor_config = anchors(cfg)
+anchor_config = anchors(cfg.model,args.dataset)
 print_info('The Anchor info: \n{}'.format(anchor_config))
 priorbox = PriorBox(anchor_config)
 net = get_network(build_net, cfg, args.dataset, 'test')
