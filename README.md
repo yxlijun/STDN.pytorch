@@ -25,7 +25,7 @@ model with pytorch,the code support:
 
 - Clone this repository.
 ```Shell
-git clone https://github.com/qijiezhao/M2Det.git
+git clone https://github.com/yxlijun/STDN.pytorch
 ```
 - Compile the nms and coco tools:
 
@@ -49,7 +49,7 @@ you can evaluate your model in  voc and coco
 python test.py --dataset VOC\COCO --trained_model ./weights/STDN_VOC_size300_netdensenet_epoch650.pth 
 ```
 ### demo 
-you can test your image, First, download the pretrained stdn300_densenet169.pth.pth(baidu cloud,google drive) file. Then, move the file to weights/.
+you can test your image, First, download the pretrained [stdn300_densenet169.pth](https://drive.google.com/file/d/1msbqNYSTppVCCsAIHfuA-70dzopIITNQ/view?usp=sharing) file. Then, move the file to weights/.
 ```
 python demo.py --dataset VOC\COCO --trained_model ./weights/STDN_VOC_size300_netdensenet_epoch650.pth --show  
 ```
